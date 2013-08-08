@@ -102,7 +102,7 @@ salamati.plugins.DistanceBearing = Ext.extend(gxp.plugins.Tool, {
     Text_Ok: "OK",
     Text_Cancel: "Cancel",
     Text_Hospitals: "Hospitals",
-    Text_Hazzards: "Hazzards",
+    Text_Hazards: "Hazards",
     Text_DistanceLines: "Distance Lines",
     Text_Distance: "Distance",
     Text_Bearing: "Bearing",
@@ -234,7 +234,7 @@ salamati.plugins.DistanceBearing = Ext.extend(gxp.plugins.Tool, {
         if(type == "pointhospitals")
                 prefix = this.Text_Hospitals;
         else
-                prefix = this.Text_Hazzards;
+                prefix = this.Text_Hazards;
                 
 		//Create a new layer to store all the features.
 		var LineLayer = new OpenLayers.Layer.Vector(prefix + " " + this.Text_DistanceLines, {
@@ -632,7 +632,7 @@ salamati.plugins.DistanceBearing = Ext.extend(gxp.plugins.Tool, {
             if(this.wpsType == "pointhospitals")
                 wpsName = "Point " + this.Text_Hospitals;
             else
-                wpsName = "Point " + this.Text_Hazzards;
+                wpsName = "Point " + this.Text_Hazards;
                 
             this.win = new Ext.Window({
                 title:			this.Text_Distance + "/" + this.Text_Bearing + " of " + wpsName,

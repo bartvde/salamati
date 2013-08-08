@@ -74,9 +74,12 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
      *  ``Boolean`` Do not show a border.
      */
     border: false,
+    
+    mediaPopup: null,
 
     /** private: method[initComponent]
      */
+
     initComponent : function() {
         if (!this.dateFormat) {
             this.dateFormat = Ext.form.DateField.prototype.format;
@@ -84,26 +87,27 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
         if (!this.timeFormat) {
             this.timeFormat = Ext.form.TimeField.prototype.format;
         }
+        
         this.customRenderers = this.customRenderers || {};
         this.customEditors = this.customEditors || {};
-        var feature = this.feature,
-            attributes;
+        var feature = this.feature, attributes;
+
         if (this.fields) {
-            // determine the order of attributes
+            // determine the order of attributes;
             attributes = {};
-            for (var i=0,ii=this.fields.length; i<ii; ++i) {
-                attributes[this.fields[i]] = feature.attributes[this.fields[i]];
+            for ( var i = 0, ii = this.fields.length; i < ii; ++i) {
+               attributes[this.fields[i]] = feature.attributes[this.fields[i]];
             }
         } else {
             attributes = feature.attributes;
         }
+        
         if (!this.excludeFields) {
             this.excludeFields = [];
         }
 
-        if(this.schema) {
-            var ucFields = this.fields ?
-                this.fields.join(",").toUpperCase().split(",") : [];
+        if (this.schema) {
+            var ucFields = this.fields ? this.fields.join(",").toUpperCase().split(",") : [];
             this.schema.each(function(r) {
                 var type = r.get("type");
                 if (type.match(/^[^:]*:?((Multi)?(Point|Line|Polygon|Curve|Surface|Geometry))/)) {
@@ -117,6 +121,67 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
                     }
                 }
                 var value = feature.attributes[name];
+                
+                if (name == "media") {
+                    this.excludeFields.push(name);
+                    var mediaEntries;
+                    if(value == null || value == '') {
+                        mediaEntries = new Array();
+                    } else {
+                        mediaEntries = JSON.parse(value);
+                    }
+                    
+                    var popuphtml = "No media.";
+                    
+                    if(mediaEntries.length > 0) {
+                	var width = mediaEntries.length*76;
+                	var height = 76;
+                	if(width > 200) {
+                	    width = 200;
+                	    height += 15;
+                	}
+                	popuphtml = 
+                	    "<div style=\"width:" + width + "px !important;height:" + height + "px !important;\" class=\"imageRow\">" +
+                	    "  <div style=\"width:500px;\">" +
+                	    "    <div class=\"set\">";
+                	for(var i = 0; i < mediaEntries.length; i++) {
+                	    var url = this.schema.url.substring(0, this.schema.url.indexOf('geoserver/wfs'));
+                	    url += "file-service/services/document/download?blobKey=" + mediaEntries[i];
+                	    if(i==0) {
+                		popuphtml +=
+                		    "<div class=\"single first\">";
+                	    } else if(i==mediaEntries.length-1) {
+                		popuphtml +=
+                		    "<div class=\"single\">";
+                	    } else {
+                		popuphtml +=
+                		    "<div class=\"single last\">";
+                	    }
+                	    popuphtml +=
+                		"      <a href=\"" + url + "\" rel=\"lightbox[media]\"><img height=60 width=60 src=\"" + url + "\" /></a>" +
+                		"    </div>";
+                	    
+                	}
+                	popuphtml +=
+                	    "    </div>" +
+                	    "  </div>" +
+                	    "</div>";  
+                    }
+              	
+                    this.mediaPopup = new GeoExt.Popup({
+                	    title: "Media",
+                	    location: feature,
+                	    autoWidth: true,
+                	    autoHeight: true,
+                	    html: popuphtml,
+                	    collapsible: true,
+                	    unpinnable: false,
+                	    closable: false
+                	});
+                    this.mediaPopup.show();
+                    return;
+                }
+                
                 var fieldCfg = GeoExt.form.recordToField(r);
                 var annotations = this.getAnnotationsFromSchema(r);
                 if (annotations && annotations.label) {
@@ -126,23 +191,23 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
                 var listeners;
                 if (typeof value == "string") {
                     var format;
-                    switch(type.split(":").pop()) {
-                        case "date":
-                            format = this.dateFormat;
-                            fieldCfg.editable = false;
-                            break;
-                        case "dateTime":
-                            if (!format) {
-                                format = this.dateFormat + " " + this.timeFormat;
-                                // make dateTime fields editable because the
-                                // date picker does not allow to edit time
-                                fieldCfg.editable = true;
-                            }
-                            fieldCfg.format = format;
-                            //TODO When http://trac.osgeo.org/openlayers/ticket/3131
-                            // is resolved, remove the listeners assignment below
-                            listeners = {
-                                "startedit": function(el, value) {
+                    switch (type.split(":").pop()) {
+                    case "date":
+                        format = this.dateFormat;
+                        fieldCfg.editable = false;
+                        break;
+                    case "dateTime":
+                        if (!format) {
+                            format = this.dateFormat + " " + this.timeFormat;
+                            // make dateTime fields editable because the
+                            // date picker does not allow to edit time
+                            fieldCfg.editable = true;
+                        }
+                        fieldCfg.format = format;
+                        //TODO When http://trac.osgeo.org/openlayers/ticket/3131
+                        // is resolved, remove the listeners assignment below
+                        listeners = {
+                                "startedit" : function(el, value) {
                                     if (!(value instanceof Date)) {
                                         var date = Date.parseDate(value.replace(/Z$/, ""), "c");
                                         if (date) {
@@ -150,66 +215,66 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
                                         }
                                     }
                                 }
-                            };
-                            this.customRenderers[name] = (function() {
-                                return function(value) {
-                                    //TODO When http://trac.osgeo.org/openlayers/ticket/3131
-                                    // is resolved, change the 5 lines below to
-                                    // return value.format(format);
-                                    var date = value;
-                                    if (typeof value == "string") {
-                                        date = Date.parseDate(value.replace(/Z$/, ""), "c");
-                                    }
-                                    return date ? date.format(format) : value;
-                                };
-                            })();
-                            break;
-                        case "boolean":
-                            listeners = {
-                                "startedit": function(el, value) {
-                                    this.setValue(Boolean(value));
+                        };
+                        this.customRenderers[name] = (function() {
+                            return function(value) {
+                                //TODO When http://trac.osgeo.org/openlayers/ticket/3131
+                                // is resolved, change the 5 lines below to
+                                // return value.format(format);
+                                var date = value;
+                                if (typeof value == "string") {
+                                    date = Date.parseDate(value.replace(/Z$/, ""), "c");
                                 }
+                                return date ? date.format(format) : value;
                             };
-                            break;
-                        default:
-                            break;
+                        })();
+                        break;
+                    case "boolean":
+                        listeners = {
+                            "startedit" : function(el, value) {
+                                this.setValue(Boolean(value));
+                            }
+                    };
+                        break;
+                    default:
+                        break;
                     }
                 }
                 this.customEditors[name] = new Ext.grid.GridEditor({
-                    field: Ext.create(fieldCfg),
-                    listeners: listeners
+                    field : Ext.create(fieldCfg),
+                    listeners : listeners
                 });
                 attributes[name] = value;
             }, this);
             feature.attributes = attributes;
         }
         this.source = attributes;
-        var ucExcludeFields = this.excludeFields.length ?
-            this.excludeFields.join(",").toUpperCase().split(",") : [];
+        var ucExcludeFields = this.excludeFields.length ? this.excludeFields.join(",").toUpperCase().split(",") : [];
         this.viewConfig = {
-            forceFit: true,
-            getRowClass: function(record) {
-                if (ucExcludeFields.indexOf(record.get("name").toUpperCase()) !== -1) {
-                    return "x-hide-nosize";
+                forceFit : true,
+                getRowClass : function(record) {
+                    if (ucExcludeFields.indexOf(record.get("name").toUpperCase()) !== -1) {
+                        return "x-hide-nosize";
+                    }
                 }
-            }
         };
         this.listeners = {
-            "beforeedit": function() {
-                return this.featureEditor && this.featureEditor.editing;
-            },
-            "propertychange": function() {
-                if (this.featureEditor) {
-                    this.featureEditor.setFeatureState(this.featureEditor.getDirtyState());
-                }
-            },
-            scope: this
+                "beforeedit" : function() {
+                    return this.featureEditor && this.featureEditor.editing;
+                },
+                "propertychange" : function() {
+                    if (this.featureEditor) {
+                        this.featureEditor.setFeatureState(this.featureEditor.getDirtyState());
+                    }
+                },
+                scope : this
         };
         //TODO This is a workaround for maintaining the order of the
         // feature attributes. Decide if this should be handled in
         // another way.
         var origSort = Ext.data.Store.prototype.sort;
-        Ext.data.Store.prototype.sort = function() {};
+        Ext.data.Store.prototype.sort = function() {
+        };
         gxp.plugins.FeatureEditorGrid.superclass.initComponent.apply(this, arguments);
         Ext.data.Store.prototype.sort = origSort;
 
@@ -218,7 +283,9 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
          * values to show up in the property grid.  Decide if this should be 
          * handled in another way.
          */
-        this.propStore.isEditableValue = function() {return true;};
+        this.propStore.isEditableValue = function() {
+            return true;
+        };
     },
 
     /** private: method[init]
@@ -241,6 +308,9 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
             this.featureEditor.un("canceledit", this.onCancelEdit, this);
             this.featureEditor = null;
         }
+        if(this.mediaPopup != null) {
+    	    this.mediaPopup.close();
+        }
         gxp.plugins.FeatureEditorGrid.superclass.destroy.call(this);
     },
 
@@ -256,10 +326,10 @@ gxp.plugins.FeatureEditorGrid = Ext.extend(Ext.grid.PropertyGrid, {
             this.setSource(feature.attributes);
         }
     }
-
+    
 });
 
-// use the schema annotations module
+//use the schema annotations module
 Ext.override(gxp.plugins.FeatureEditorGrid, gxp.plugins.SchemaAnnotations);
 
 Ext.preg(gxp.plugins.FeatureEditorGrid.prototype.ptype, gxp.plugins.FeatureEditorGrid);

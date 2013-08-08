@@ -187,16 +187,18 @@ gxp.plugins.ClickableFeatures = Ext.extend(gxp.plugins.Tool, {
                             );
                         }.createDelegate(this);
                         
-                        var feature = featureManager.featureLayer.getFeatureByFid(fid);                        
-                        if (feature) {
-                            this.select(feature);
-                        } else if (featureManager.paging && featureManager.pagingType === gxp.plugins.FeatureManager.QUADTREE_PAGING) {
+                        var feature = featureManager.featureLayer.getFeatureByFid(fid); 
+//                        if (feature) {
+//                            this.select(feature);
+//                        } else 
+                        if (featureManager.paging && featureManager.pagingType === gxp.plugins.FeatureManager.QUADTREE_PAGING) {
                             var lonLat = this.target.mapPanel.map.getLonLatFromPixel(evt.xy);
                             featureManager.setPage({lonLat: lonLat}, function() {
                                 var feature = featureManager.featureLayer.getFeatureByFid(fid);
-                                if (feature) {
-                                    this.select(feature);
-                                } else if (this.autoLoadFeature === true) {
+//                                if (feature) {
+//                                    this.select(feature);
+//                                } else 
+                                if (this.autoLoadFeature === true) {
                                     autoLoad();
                                 }
                             }, this);

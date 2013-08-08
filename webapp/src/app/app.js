@@ -18,13 +18,17 @@
  * @require salamati/plugins/DistanceBearing.js
  * @require RowExpander.js
  * @require widgets/NewSourceDialog.js
+ * @require widgets/EmbedMapDialog.js
  * @require plugins/FeatureManager.js
+ * @require plugins/FeatureGrid.js
  * @require plugins/FeatureEditor.js
  * @require plugins/Navigation.js
  * @require plugins/SnappingAgent.js
+ * @require GeoGitUtil.js
  * @require plugins/VersionedEditor.js
  * @require plugins/Playback.js
  * @require plugins/Measure.js
+ * @require plugins/FeedGetFeatureInfo.js
  * @require OpenLayers/Format/WKT.js
  * @require OpenLayers/Control/MousePosition.js
  * @require OpenLayers/Control/ScaleLine.js
@@ -34,6 +38,13 @@
  * @require salamati/locale/en.js
  * @require salamati/locale/es.js
  * @require salamati/plugins/SalamatiTools.js
+ * @require plugins/GeoGitHistory.js
+ * @require plugins/GeoGitHistoryButton.js
+ * @require plugins/LayerMenuButton.js
+ * @require plugins/GeoGitRepoInfo.js
+ * @require plugins/DiffPanel.js
+ * @require plugins/GeoGitFeatureAttributeGrid.js
+ * @require plugins/Styler.js
  */
 
 (function() {
@@ -51,6 +62,14 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
 	Map: "Default Map",
 	Title_Tools: "Default Tools",
 	Title_Search: "Default Search",
+    Title_Layers: "Layers",
+    Title_GeoGit: "GeoGit",
+    Title_Diff: "Diff",
+    Title_Feature_Diff: "Feature Diff",
+    Title_Old: "Old",
+    Title_New: "New",
+    Title_Merged: "Merged",
+    Title_Done: "Done",
 	Search_Submit: "Default Go",
 	ActionTip_Default: "Distance/Bearing of features from click location",
 	ActionTip_Edit: "Get feature info",
@@ -77,7 +96,6 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
 	
     constructor: function(config) {
         config = config || {};
-
         // Starting with this.authorizedRoles being undefined, which means no
         // authentication service is available
         if (config.authStatus === 401) {
@@ -92,8 +110,13 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
 
         config.listeners = {
             "ready": function(){
-                //Show the tools window
 
+            	// Hide the southPanel - needed it to display at first
+            	// in order to size the columns correctly
+            	var southPanel = app.portal.southPanel;
+            	southPanel.hide();
+            	app.portal.doLayout();
+            	
                 /*Ext.Ajax.on('beforerequest', showSpinner, this);
                 Ext.Ajax.on('requestcomplete', hideSpinner, this);
                 Ext.Ajax.on('requestexception', hideSpinner, this);*/
@@ -212,7 +235,7 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
                     // write cookie
                     document.cookie = cookietext;
                 };
-                //TODO: implement but we also need to cach the sources as by defaut it only tries to parse out local host geoserver
+                //TODO: implement but we also need to cache the sources as by default it only tries to parse out local host geoserver
                 var setMapLayersCookie = function(expiredays) {
                 };
 
@@ -236,15 +259,21 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
                     },
                     "addlayer" : function(e) {
                         setMapLayersCookie();
-                        console.log("map.events.addlayer: ", e);
+                        //console.log("map.events.addlayer: ", e);
+                        gxp.GeoGitUtil.isGeoGitLayer(e.layer);
+                        gxp.GeoGitUtil.getGeometryAttributeName(true);
                     },
                     "removelayer" : function(e) {
                         setMapLayersCookie();
-                        console.log("map.events.removelayer: ", e);
+                        //console.log("map.events.removelayer: ", e);
+                        if(e.layer.metadata.isGeoGit) {
+                            app.fireEvent("togglesouthpanel");
+                        }
                     },
                     "changelayer" : function(e) {
                         setMapLayersCookie();
-                        console.log("map.events.changelayer: ", e);
+                        //console.log("map.events.changelayer: ", e);
+                        gxp.GeoGitUtil.getGeometryAttributeName(true);
                     },
                     scope : map
                 });
@@ -273,6 +302,106 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
                         }
                     }
                 });
+            },
+            "togglesouthpanel" : function() { 
+                console.log("toggle south panel")
+                var southPanel = app.portal.southPanel;
+                if(southPanel.hidden) {
+                    southPanel.show();
+                    southPanel.expand();
+                } else {
+                    southPanel.hide();
+                }
+                app.portal.doLayout();
+            },
+            "commitdiffselected" : function(store, oldCommitId, newCommitId, layerProjection) {
+                var westPanel = app.portal.westpanel;
+                this.tools['diffpanel'].fireEvent("commitdiffselected", store, oldCommitId, newCommitId, layerProjection);
+            },
+            "diffstoshow" : function(merging) {
+                var westPanel = app.portal.westpanel;
+                var southPanel = app.portal.southPanel;
+                if(westPanel.hidden) {
+                    westPanel.show();
+                    westPanel.expand();
+                }
+                
+                if(!southPanel.hidden){
+                    southPanel.hide();
+                }
+
+                if(!merging) {
+                    app.portal.westpanel.diffDoneButton.show();
+                }
+                
+                app.portal.featureDiffPanel.hide();
+                app.portal.doLayout();
+            },
+            "getattributeinfo" : function(store, oldCommitId, newCommitId, path, layerProjection) {
+                var featureDiffPanel = app.portal.featureDiffPanel;
+                var diffLayersWindow = app.portal.diffLayersWindow;
+                this.tools['attribute_grid'].fireEvent("getattributeinfo", store, oldCommitId, newCommitId, path, layerProjection);
+                if(featureDiffPanel.hidden) {
+                    featureDiffPanel.show();
+                    diffLayersWindow.show();
+                    diffLayersWindow.items.items[0].items.items[1].disable();
+                    diffLayersWindow.setPosition(app.mapPanel.getWidth() / 2 - diffLayersWindow.getWidth() / 2, app.mapPanel.tbar.getHeight());
+                    app.portal.featureDiffPanel.setPosition(app.mapPanel.getWidth() / 2 - app.portal.featureDiffPanel.getWidth() / 2, 
+                            app.mapPanel.getHeight() - app.portal.featureDiffPanel.getHeight());
+                }
+                app.portal.doLayout();
+            },
+            "getmergeinfo": function(store, oldCommitId, newCommitId, ancestorCommitId, data, transactionId) {
+                var featureDiffPanel = app.portal.featureDiffPanel;
+                var diffLayersWindow = app.portal.diffLayersWindow;
+                this.tools['attribute_grid'].fireEvent("getmergeinfo", store, oldCommitId, newCommitId, ancestorCommitId, data, transactionId);
+                if(featureDiffPanel.hidden) {
+                    featureDiffPanel.show();
+                    diffLayersWindow.show();
+                    diffLayersWindow.items.items[0].items.items[1].enable();
+                    diffLayersWindow.setPosition(app.mapPanel.getWidth() / 2 - diffLayersWindow.getWidth() / 2, app.mapPanel.tbar.getHeight());
+                    app.portal.featureDiffPanel.setPosition(app.mapPanel.getWidth() / 2 - app.portal.featureDiffPanel.getWidth() / 2, 
+                            app.mapPanel.getHeight() - app.portal.featureDiffPanel.getHeight());
+                }
+                
+                app.portal.doLayout();
+            },
+            "beginMerge": function(store, transactionId, ours, theirs, load) {
+                var westPanel = app.portal.westpanel;
+                this.tools['diffpanel'].fireEvent("beginMerge", store, transactionId, load);
+                this.tools['feature_editor'].fireEvent("beginMerge");
+                this.tools['geogithistory'].fireEvent("beginMerge"); 
+                this.tools['attribute_grid'].fireEvent("beginMerge", store, transactionId, ours, theirs);
+                if(westPanel.hidden) {
+                    westPanel.show();
+                    westPanel.expand();
+                }
+                app.portal.featureDiffPanel.hide();
+                app.portal.westpanel.diffDoneButton.hide();
+                app.portal.diffLayersWindow.hide();
+                app.portal.doLayout();
+            },
+            "conflictsDetected": function(numConflicts) {
+                this.tools['repo_info'].fireEvent("conflictsDetected", numConflicts);
+            },
+            "conflictResolved": function(fid) {
+                this.tools['repo_info'].fireEvent("conflictResolved");
+                this.tools['diffpanel'].fireEvent("conflictResolved", fid);
+                app.portal.featureDiffPanel.hide();
+                app.portal.diffLayersWindow.hide();
+            },
+            "endMerge": function() {        
+                this.tools['diffpanel'].fireEvent("endMerge");
+                this.tools['feature_editor'].fireEvent("endMerge");
+                this.tools['geogithistory'].fireEvent("endMerge");
+                this.tools['attribute_grid'].fireEvent("endMerge");
+                app.portal.westpanel.hide();
+                app.portal.featureDiffPanel.hide();
+                app.portal.diffLayersWindow.hide();
+                app.portal.doLayout();
+            },
+            "featureEditorUnselectAll": function() {
+                this.tools['feature_editor'].fireEvent("featureEditorUnselectAll");
             }
         };
 
@@ -323,81 +452,259 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
                 height: 100
             });
         }
-        var items = config.portalConfig && config.portalConfig.items;
-        config.portalConfig = Ext.apply(config.portalConfig || {}, {
+        this.portalConfig = Ext.apply(config.portalConfig || {}, {
             layout: "border",
 
             // by configuring items here, we don't need to configure portalItems
             // and save a wrapping container
             items: [{
-                id: "centerpanel",
+                ref: "centerpanel",
                 xtype: "panel",
                 layout: "fit",
+                style: "top:81px",
                 region: "center",
                 border: false,
                 items: ["mymap",
-                    win]
+                    win, {
+                    ref: "../featureDiffPanel",
+                    xtype: "window",
+                    hidden: true,
+                    closable: true,
+                    layout: "fit",
+                    height: 200,
+                    width: 600,
+                    constrainHeader: true,
+                    title: this.Title_Feature_Diff,
+                    listeners: {
+                        "beforeclose": function(panel) {
+                            panel.hide();
+                            app.portal.diffLayersWindow.hide();
+                            app.tools['attribute_grid'].clearLayers();
+                            return false;
+                        }
+                    }
+                }, {
+                    title: salamati.Viewer.prototype.Title_Geometry_Diff,
+                    ref: "../diffLayersWindow",
+                    closeAction: "hide",
+                    xtype: "window",
+                    resizable: false,
+                    closable: false,
+                    layout: "fit",
+                    items: [
+                        {
+                            xtype: "panel",
+                            id: "idDiffLayersWindowPanel",
+                            cls: "mydifflayerwindowclass",
+                            layout: "hbox",
+                            layoutConfig: {
+                                align: 'center',
+                                padding: '5'
+                            },
+                            items: [
+                                {
+                                    xtype: 'button',
+                                    tooltip: salamati.Viewer.prototype.Title_Old,
+                                    iconCls: "salamati-icon-oldgeometry",
+                                    handler: function() {
+                                        app.tools['attribute_grid'].fireEvent("showOldGeometry");
+                                    }
+                                },{
+                                    xtype: 'button',
+                                    tooltip: salamati.Viewer.prototype.Title_Merged,
+                                    iconCls: "salamati-icon-mergedgeometry",                       
+                                    handler: function() {
+                                        app.tools['attribute_grid'].fireEvent("showMergeGeometry");
+                                    }
+                                },{
+                                    xtype: 'button',
+                                    tooltip: salamati.Viewer.prototype.Title_New,
+                                    iconCls: "salamati-icon-newgeometry",
+                                    handler: function() {
+                                        app.tools['attribute_grid'].fireEvent("showCurrentGeometry");
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }]
             }, {
-            	id: "eastpanel",
-            	layout: "accordion",
-            	region: "east",
-            	collapsible: true,
+            	ref: "westpanel",
+            	layout: "vbox",
+            	region: "west",
+            	collapsible: false,
+            	title: this.Title_Diff,
+            	hidden: true,
+            	split: true,
+            	minSize: 200,
+            	maxSize: 300,
             	width: 200,
             	items: [{
-            		title: 'Search',
-            		id: "searchtab",
-            		collapsed: true,
+                    xtype: 'button',
+                    text: this.Title_Done,
+                    ref: 'diffDoneButton',
+                    cls: 'diffDoneButtonClass diffDoneButtonTextClass',
+                    hidden: true,
+                    width: 200,
+                    handler: function() {
+                        app.portal.westpanel.hide();
+                        app.portal.westpanel.diffDoneButton.hide();
+
+                        app.portal.featureDiffPanel.hide();
+                        app.portal.diffLayersWindow.hide();
+                        if(app.tools.diffpanel.diffLayer) {
+                            var layer = app.mapPanel.map.getLayer(app.tools.diffpanel.diffLayer.id);
+                            if(layer !== null) {
+                                app.mapPanel.map.removeLayer(layer);
+                            }
+                        }
+
+                        if(app.tools.attribute_grid.oldGeomLayer) {
+                            var layer = app.mapPanel.map.getLayer(app.tools.attribute_grid.oldGeomLayer.id);
+                            if(layer !== null) {
+                                app.mapPanel.map.removeLayer(layer);
+                            }
+                        }
+
+                        if(app.tools.attribute_grid.mergeGeomLayer) {
+                            var layer = app.mapPanel.map.getLayer(app.tools.attribute_grid.mergeGeomLayer.id);
+                            if(layer !== null) {
+                                app.mapPanel.map.removeLayer(layer);
+                            }
+                        }
+
+                        if(app.tools.attribute_grid.currentGeomLayer) {
+                            var layer = app.mapPanel.map.getLayer(app.tools.attribute_grid.currentGeomLayer.id);
+                            if(layer !== null) {
+                                app.mapPanel.map.removeLayer(layer);
+                            }
+                        }
+                        app.portal.doLayout();
+                    }
+                }]
+            }, {
+            	ref: "eastpanel",
+            	layout: "vbox",
+            	region: "east",
+            	collapsible: true,
+            	style: "top:81px",
+            	split: true,
+            	minSize: 200,
+            	maxSize: 300,
+            	width: 200,
+            	items: [{
+            		ref: "../tabs",
+            		xtype: "tabpanel",
+            		flex: 0.50,
+            		enableTabScroll: true,
+            		activeTab: 1,
             		items: [{
-            			xtype: "textfield",
-            		    id: "searchField",
-            		    cls: "searchFieldClass",
-            		    emptyText: "Search",
-            		    enableKeyEvents: true,
-            		    listeners: {
-            		   	 'keyup' : function(element, event){
-            		   		 if(event.button == 12){
-            		   			 submitSearch(element.getValue());
-            		   		 }
-            		   	 }
-            		    }
-            		}, {
-            		    xtype: "grid",
-                		store: this.NominatimStore,
-                		cls: "nominatimGridClass",
-                		hideHeaders: true,
-                		border: false,
-                		columns: [{
-                			id: 'place',
-                			//header: 'Address',
-                			width: 200,
-                			//sortable: true,
-                			dataIndex: 'display_name'
-                		}],
-                		listeners: {
-                			'cellclick': function(grid, rowIndex, columnIndex, e){
-                				var record = grid.getStore().getAt(rowIndex);
-                				console.log("data", record.data);
+            			title: this.Title_Search,
+            			ref: "../../searchtab",
+            			items: [{
+            				xtype: "textfield",
+            		    	id: "searchField",
+            		    	cls: "searchFieldClass",
+            		    	emptyText:  this.Title_Search,
+            		    	enableKeyEvents: true,
+            		    	listeners: {
+            		    		'keyup' : function(element, event){
+            		    			if(event.button == 12){
+            		    				submitSearch(element.getValue());
+            		   		 		}
+            		   	 		}
+            		    	}
+            			}, {
+            				xtype: "grid",
+                			store: this.NominatimStore,
+                			cls: "nominatimGridClass",
+                			hideHeaders: true,
+                			border: false,
+                			columns: [{
+                				id: 'place',
+                				//header: 'Address',
+                				width: 200,
+                				//sortable: true,
+                				dataIndex: 'display_name'
+                			}],
+                			listeners: {
+                				'cellclick': function(grid, rowIndex, columnIndex, e){
+                					var record = grid.getStore().getAt(rowIndex);
+                					console.log("data", record.data);
                 				
-                				zoomToPlace(record.data.lon, record.data.lat, record.data.boundingBox[2], 
+                					zoomToPlace(record.data.lon, record.data.lat, record.data.boundingBox[2], 
                 						record.data.boundingBox[0], record.data.boundingBox[3], record.data.boundingBox[1]);
+                				}
                 			}
-                		}
+            			}]
+            		}, {
+            			title: this.Title_Layers,
+            			ref: "../../layerpanel",
+            			autoScroll: true,
+            			width: 200
+            		}, {
+            			title: this.Title_GeoGit,
+            			ref: "../../repopanel",
+            			autoScroll: true,
+            			width: 200
             		}]
             	}, {
-            		title: 'Layers',
-            		id: "layerpanel"
-            	}]
+            		ref: "../attributespanel",
+            		layout: "vbox",
+            		autoScroll: true,
+            		width: 200,
+            		flex: 0.50,
+                    listeners: {
+                        'resize': function(win, width, height) {
+                            // this is to keep the panel the same size as the window if it resizes
+                            win.width = width;
+                            if(win.items !== undefined && win.items.items[0] !== undefined) {
+                                win.items.items[0].width = width;
+                            }
+                        }
+                    }
+            	}],
+            	listeners: {
+            	    'resize': function(win, width, height) {
+                        // this is to keep the panels the same size as the window if it resizes
+                        win.items.items[0].width = width;
+                        win.items.items[1].setWidth(width);
+                    }
+            	}
+            },{
+            	ref: "southPanel",
+            	xtype: "panel",
+            	layout: "fit",
+            	region: "south",
+            	collapsible: true,
+            	hidden: true,
+            	border: "false",
+            	split: true,
+            	minSize: 150,
+            	maxSize: 500,
+            	height: 200
             }],
             bbar: {id: "mybbar"}
         });
-        if (items) {
-            config.portalConfig.items.push(items);
+        if (config.portalItems) {
+            this.portalConfig.items = this.portalConfig.items.concat(config.portalItems);
         }
         var tools = [];
         if (config.tools) {
             tools = tools.concat(config.tools);
         }
+        if(!config.userprofilename) {
+            config.userprofilename = config.username;
+        } else {
+            if(config.username) {
+        	config.userprofilename = config.userprofilename + " (" + config.username + ")";
+            }
+        }
         tools.push({
+            ptype: 'gn_xhrtrouble'
+        }, {
+            ptype: 'gn_save'
+        }, {
             ptype: "gxp_layermanager",
             id: "layermanager",
             outputConfig: {
@@ -407,8 +714,15 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
             },
             outputTarget: "layerpanel"
         }, {
-            ptype: "gxp_playback",
-            outputTarget: "map.tbar"
+            ptype: "gn_layerinfo",
+            actionTarget: ["tree.contextMenu"]
+        }, {
+        	ptype: "gxp_playback",
+        	outputTarget: "map.tbar"
+        }, {
+        	ptype: "gxp_styler",
+        	actionTarget: ["tree.tbar", "tree.contextMenu"],
+        	rasterStyling: true
         }, {
         	ptype: "salamati_tools",
         	outputTarget: "map.tbar",
@@ -420,8 +734,15 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
             ptype: "gxp_removelayer",
             actionTarget: ["tree.tbar", "tree.contextMenu"]
         }, {
+            ptype: "gxp_geogithistorybutton",
+            actionTarget: "tree.contextMenu"
+        }, {
             ptype: "app_settings",
             actionTarget: "tree.tbar"
+        }, {
+            ptype: "gxp_layermenubutton",
+            actionTarget: "tree.tbar",
+            layer_manager: "layermanager"
         }, {
         	ptype: "gxp_measure",
         	actionTarget: "map.tbar"
@@ -434,6 +755,13 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
         }, {
             ptype: "gxp_navigationhistory",
             actionTarget: "mymap.tbar"
+        }, {
+        	ptype: "gxp_geogitrepoinfo",
+        	id: "repo_info",
+        	outputTarget: "repopanel",
+            featureManager: "feature_manager",
+            username: config.userprofilename,
+            useremail: config.userprofileemail
         }, {
             ptype: "gxp_featuremanager",
             id: "feature_manager",
@@ -453,14 +781,42 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
             iconClsEdit: "salamati-icon-getfeatureinfo",
             editFeatureActionTip: this.ActionTip_Edit,
             actionTarget: "toolsPanel",
+            popupType: "gxp_featureeditpanel",
             outputConfig: {
                 editorPluginConfig: {
                     ptype: "gxp_versionededitor",
-                    /* assume we will proxy the geogit web api */
-                    url: "/geoserver/"
+                    /* assume we will proxy the geogit web api*/ 
+                    url: "/geoserver/",
+                    featureManager: "feature_manager",
+                    newStyle: {fillColor: "#00FF00", strokeColor: "#00FF00"},
+                    oldStyle: {fillColor: "#FF0000", strokeColor: "#FF0000"}
                 }
-            }
+            },
+            outputTarget: "attributespanel"
         },{
+        	ptype: "gxp_geogithistory",
+        	id: "geogithistory",
+        	featureManager: "feature_manager",
+        	outputTarget: "southPanel"
+        },{
+        	ptype: "gxp_diffpanel",
+        	id: "diffpanel",
+        	outputTarget: "westpanel",
+        	newStyle: {fillColor: "#00FF00", fillOpacity: 0.1, strokeColor: "#00FF00", strokeWidth: 5},
+            oldStyle: {fillColor: "#FF0000", fillOpacity: 0.1, strokeColor: "#FF0000", strokeWidth: 5},
+            modifiedStyle: {fillColor: "#FFFF00", fillOpacity: 0.1, strokeColor: "#FFFF00", strokeWidth: 5},
+            conflictStyle: {fillColor: "#FFA500", fillOpacity: 0.1, strokeColor: "#FFA500", strokeWidth: 5}
+        },{
+            ptype: "gxp_geogitattributegrid",
+            id: "attribute_grid",
+            outputTarget: "featureDiffPanel",
+            newStyle: {fillColor: "#00FF00", fillOpacity: 0.1, strokeColor: "#00FF00", strokeWidth: 5},
+            oldStyle: {fillColor: "#FF0000", fillOpacity: 0.1, strokeColor: "#FF0000", strokeWidth: 5},
+            modifiedStyle: {fillColor: "#FFFF00", fillOpacity: 0.1, strokeColor: "#FFFF00", strokeWidth: 5},
+            conflictStyle: {fillColor: "#FFA500", fillOpacity: 0.1, strokeColor: "#FFA500", strokeWidth: 5},
+            ourStyle: {fillColor: "#0000FF", fillOpacity: 0.1, strokeColor: "#0000FF", strokeWidth: 5},
+            theirStyle: {fillColor: "#FF00FF", fillOpacity: 0.1, strokeColor: "#FF00FF", strokeWidth: 5}
+        },/*{
             ptype: "app_distancebearing",
             actionTarget: "toolsPanel",
             toggleGroup: "distanceBearing",
@@ -469,6 +825,10 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
             infoActionTip: this.ActionTip_Default,
            // iconCls: "gxp-icon-distance-bearing-generic"
             iconCls: "gxp-icon-distance-bearing"
+        },*/ {
+            actions: ['->']
+        }, {
+            ptype: 'gn_savehyperlink'
         }/*, {
             ptype: "app_distancebearing",
             actionTarget: "toolsPanel",
@@ -493,7 +853,7 @@ salamati.Viewer = Ext.extend(gxp.Viewer, {
     }
 });
 
-var app;
+//var app;
 //var baseUrl = "http://192.168.10.125/";
 
 var WGS84;
@@ -640,7 +1000,9 @@ var searchField = new Ext.form.TextField({
 Ext.onReady(function() {
 	
 	WGS84 = new OpenLayers.Projection("EPSG:4326");
-	GoogleMercator = new OpenLayers.Projection("EPGS:900913");
+	GoogleMercator = new OpenLayers.Projection("EPSG:900913");
+	
+
 	
     // load language setting from cookie if available
 	var lang = "en";
@@ -700,3 +1062,6 @@ Ext.onReady(function() {
 		}
 	});
 });
+
+// mixin
+Ext.override(salamati.Viewer, GeoNode.ComposerMixin);

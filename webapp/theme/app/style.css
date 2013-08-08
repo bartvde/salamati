@@ -28,8 +28,14 @@ body {
 
 .mytoolwindowclass {
    /* width: 342px !important;*/
-   	width: 210px !important;
+   /*	width: 210px !important;*/
+    width: 145px !important;
     height: 78px !important;
+}
+
+.mydifflayerwindowclass {
+    width: 210px !important;
+   	height: 78px !important;
 }
 
 .mysearchwindowclass {
@@ -237,10 +243,44 @@ p.css-vertical-text {
     width: 60px !important;
 }
 
-.x-btn .salamati-icon-getfeatureinfo {
-    background-image: url(img/06-magnify@2x.png);
+.x-btn .salamati-icon-newgeometry {
+    background-image: url(img/02-arrow-east@2x.png);
     height: 60px !important;
     width: 60px !important;
+}
+
+.x-btn .salamati-icon-mergedgeometry {
+    background-image: url(img/10-arrows-in@2x.png);
+    height: 60px !important;
+    width: 60px !important;
+}
+
+.x-btn .salamati-icon-oldgeometry {
+    background-image: url(img/09-arrow-west@2x.png);
+    height: 60px !important;
+    width: 60px !important;
+}
+
+.x-btn .salamati-icon-rightangles {
+    background-image: url(img/28-circle-out.png);
+}
+
+.x-btn .salamati-icon-getfeatureinfo {
+    background-image: url(img/42-info@2x.png);
+    height: 60px !important;
+    width: 60px !important;
+}
+
+.x-menu-item .salamati-icon-diff {
+    background-image: url(img/62-contrast.png);
+}
+
+.x-menu-item .salamati-icon-merge {
+    background-image: url(img/55-network.png);
+}
+
+.x-btn .salamati-icon-diff {
+    background-image: url(img/62-contrast.png);
 }
 
 .x-btn .gxp-icon-dbhospitals {
@@ -320,4 +360,16 @@ p.css-vertical-text {
     height: 60px !important;
     width: 60px !important;
 
+}
+
+.diffDoneButtonTextClass .x-btn-text {
+	font-size: 20px !important;
+	font-weight: bold !important;
+	height: 40px !important;
+}
+
+.diffDoneButtonClass td.x-btn-mc {   
+    outline-color: #000000 !important;
+    outline-style: double !important;
+    outline-width: medium !important;
 }

@@ -80,6 +80,7 @@ gxp.plugins.Zoom = Ext.extend(gxp.plugins.Tool, {
      * If set to false, only Zoom In and Zoom Out buttons will be created.
      * Default is false.
      */
+    showZoomBoxAction: true,
 
     /** private: method[constructor]
      */
@@ -90,7 +91,7 @@ gxp.plugins.Zoom = Ext.extend(gxp.plugins.Tool, {
     /** api: method[addActions]
      */
     addActions: function() {
-        var actions = [{
+        var actions = [/*{
             menuText: this.zoomInMenuText,
             iconCls: "gxp-icon-zoom-in",
             tooltip: this.zoomInTooltip,
@@ -106,16 +107,23 @@ gxp.plugins.Zoom = Ext.extend(gxp.plugins.Tool, {
                 this.target.mapPanel.map.zoomOut();
             },
             scope: this
-        }];
+        }*/];
         if (this.showZoomBoxAction) {
+            var zoomBox = new OpenLayers.Control.ZoomBox(this.controlOptions);
+            var zoomBoxDone = zoomBox.zoomBox;
+            var newZoomBoxDone = function () {
+        	zoomBoxDone.apply(zoomBox);
+        	zoomBox.deactivate();
+            };
+            zoomBox.zoomBox = newZoomBoxDone;
             actions.unshift(new GeoExt.Action({
                 menuText: this.zoomText,
                 iconCls: "gxp-icon-zoom",
                 tooltip: this.zoomTooltip,
-                control: new OpenLayers.Control.ZoomBox(this.controlOptions),
+                control: zoomBox,
                 map: this.target.mapPanel.map,
                 enableToggle: true,
-                allowDepress: false,
+                allowDepress: true,
                 toggleGroup: this.toggleGroup
             }));
         }

@@ -119,7 +119,13 @@ gxp.plugins.LayerTree = Ext.extend(gxp.plugins.Tool, {
      */
     addOutput: function(config) {
         config = Ext.apply(this.createOutputConfig(), config || {});
-        return gxp.plugins.LayerTree.superclass.addOutput.call(this, config);
+        var output = gxp.plugins.LayerTree.superclass.addOutput.call(this, config);
+        output.on({
+            contextmenu: this.handleTreeContextMenu,
+            beforemovenode: this.handleBeforeMoveNode,
+            scope: this
+        });
+        return output;
     },
     
     /** private: method[createOutputConfig]
@@ -190,13 +196,16 @@ gxp.plugins.LayerTree = Ext.extend(gxp.plugins.Tool, {
                     scope: this
                 }
             }),
-            listeners: {
-                contextmenu: this.handleTreeContextMenu,
-                beforemovenode: this.handleBeforeMoveNode,                
-                scope: this
-            },
             contextMenu: new Ext.menu.Menu({
-                items: []
+                items: [
+                    {
+                        text: plugin.Title_ZoomTo,
+                        iconCls: "gxp-icon-zoom-to",
+                        handler: function() {
+                            app.mapPanel.map.zoomToExtent(plugin.target.selectedLayer.data.layer.maxExtent);
+                        }
+                    }
+                ]
             })
         };
     },

@@ -12,8 +12,61 @@ li.commit {
 li.commit div {
     padding: 2px;
 }
+
+li.diff {
+    font-size: 11px;
+    border-bottom: 2px solid #666666;
+    padding: 5px;
+}
+div.attr-name {
+	font-weight: bold;
+}
+div.attr-value {
+	font-style: italic;
+}
+div.info {
+	font-weight: bold;
+	font-size: 11px;
+	border-bottom: 2px solid #000000;
+    padding: 5px;
+    background-color: #CCCCCC;
+}
+
 .ext-chrome input[type="checkbox"] {
     margin-top: 1px;
+}
+
+.gxp-grid-font-cls .x-grid3-row .x-grid3-cell-inner{
+	font-size: 11px;
+	height: auto;
+	white-space: normal;
+}
+
+.gxp-grid-hd-font-cls .x-grid3-hd-row .x-grid3-hd-inner {
+	font-size: 11px;
+	height: 15px;
+}
+
+.gxp-selected-branch-cls .x-tree-node-anchor {
+	font-weight: bold;
+}
+
+.gxp-added-cls .x-grid3-cell-inner {
+    background-color: #e2ffe2; 
+    color: #090;
+}
+
+.gxp-removed-cls .x-grid3-cell-inner {
+	background-color: #ffe2e2; 
+    color: #900;
+}
+.gxp-modified-cls .x-grid3-cell-inner {
+	background-color: #ffa; 
+    color: #009; 
+}
+.gxp-conflicted-cls .x-grid3-cell-inner {
+	background-color: #ffd27f; 
+ 
 }
 
 .gxp-layerproperties-label {
@@ -524,7 +577,6 @@ div.olMap div.gx-overlay-playback {
 }
 
 .gx_timeslider div.x-slider-thumb{
-    background-position:0;
     cursor: pointer;
 }
 .gx_timeslider div.x-slider-min-thumb{

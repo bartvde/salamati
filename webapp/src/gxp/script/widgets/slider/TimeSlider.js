@@ -26,6 +26,8 @@ gxp.slider.TimeSlider = Ext.extend(Ext.slider.MultiSlider, {
     timeManager : null,
     playbackMode : 'track',
     autoPlay : false,
+    aggressive: false,
+    changeBuffer: 10,
     map: null,
     initComponent : function() {
         if(!this.timeManager) {
@@ -90,7 +92,6 @@ gxp.slider.TimeSlider = Ext.extend(Ext.slider.MultiSlider, {
             [new Ext.slider.Tip({getText:this.getThumbText})]);
 
         this.listeners = Ext.applyIf(this.listeners || {}, {
-            'changecomplete' : this.onSliderChangeComplete,
             'dragstart' : function() {
                 if(this.timeManager.timer) {
                     this.timeManager.stop();
@@ -119,7 +120,11 @@ gxp.slider.TimeSlider = Ext.extend(Ext.slider.MultiSlider, {
             },
             scope : this
         });
-
+        if (this.aggressive === true) {
+            this.listeners['change'] = {fn: this.onSliderChangeComplete, buffer: this.changeBuffer};
+        } else {
+            this.listeners['changecomplete'] = this.onSliderChangeComplete;
+        }
         gxp.slider.TimeSlider.superclass.initComponent.call(this);
     },
 
@@ -298,7 +303,17 @@ gxp.slider.TimeSlider = Ext.extend(Ext.slider.MultiSlider, {
         }
     },
 
+    onClickChange : function(local) {
+        this._click = true;
+        gxp.slider.TimeSlider.superclass.onClickChange.apply(this, arguments);
+    },
+
     onSliderChangeComplete: function(slider, value, thumb, silent){
+        if (this._click !== true) {
+            return;
+        } else {
+            delete this._click;
+        }
         var timeManager = slider.timeManager;
         //test if this is the main time slider
         switch (slider.indexMap[thumb.index]) {
@@ -337,6 +352,38 @@ gxp.slider.TimeSlider = Ext.extend(Ext.slider.MultiSlider, {
             delete this._restartPlayback;
             timeManager.play();
         }
+    },
+
+    // override to add pre buffer progress
+    onRender : function() {
+        this.autoEl = {
+            cls: 'x-slider ' + (this.vertical ? 'x-slider-vert' : 'x-slider-horz'),
+            cn : [{
+                cls: 'x-slider-end',
+                cn : {
+                    cls:'x-slider-inner',
+                    cn : [{tag:'a', cls:'x-slider-focus', href:"#", tabIndex: '-1', hidefocus:'on'}]
+                }
+            }, {cls: 'x-slider-progress'}]
+        };
+
+        Ext.slider.MultiSlider.superclass.onRender.apply(this, arguments);
+
+        this.endEl   = this.el.first();
+        this.progressEl = this.el.child('.x-slider-progress');
+        this.innerEl = this.endEl.first();
+        this.focusEl = this.innerEl.child('.x-slider-focus');
+
+        //render each thumb
+        for (var i=0; i < this.thumbs.length; i++) {
+            this.thumbs[i].render();
+        }
+
+        //calculate the size of half a thumb
+        var thumb      = this.innerEl.child('.x-slider-thumb');
+        this.halfThumb = (this.vertical ? thumb.getHeight() : thumb.getWidth()) / 2;
+
+        this.initEvents();
     }
 
 });

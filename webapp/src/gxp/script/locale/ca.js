@@ -405,6 +405,23 @@ GeoExt.Lang.add("ca", {
 
     "gxp.ScaleOverlay.prototype": {
         zoomLevelText: "Escala"
+    },
+
+    "gxp.Viewer.prototype": {
+        saveErrorText: "Problemes desant: "
+    },
+
+    "gxp.FeedSourceDialog.prototype": {
+        feedTypeText: "Font",
+        addPicasaText: "Picasa fotos",
+        addYouTubeText: "YouTube Videos",
+        addRSSText: "Feed GeoRSS Un altre",
+        addFeedText: "Afegeix a Mapa",
+        addTitleText: "Títol",
+        keywordText: "Paraula clau",
+        doneText: "Fet",
+        titleText: "Afegir Feeds",
+        maxResultsText: "Productes Max"
     }
 
 });

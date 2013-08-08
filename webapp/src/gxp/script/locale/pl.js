@@ -385,6 +385,23 @@ GeoExt.Lang.add("pl", {
 
     "gxp.ScaleOverlay.prototype": { 
         zoomLevelText: "Poziom powiększenia"
+    },
+
+    "gxp.Viewer.prototype": {
+        saveErrorText: "Trouble saving: "
+    },
+
+    "gxp.FeedSourceDialog.prototype": {
+        feedTypeText: "Źródło",
+        addPicasaText: "Picasa zdjęcia",
+        addYouTubeText: "YouTube Videos",
+        addRSSText: "Inne GeoRSS",
+        addFeedText: "Dodaj do mapy",
+        addTitleText: "Tytuł",
+        keywordText: "Słowo",
+        doneText: "Gotowe",
+        titleText: "Dodaj kanały",
+        maxResultsText: "Rzeczy Max"
     }
 
 });

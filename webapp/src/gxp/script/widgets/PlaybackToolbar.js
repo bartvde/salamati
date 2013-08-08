@@ -49,6 +49,8 @@ gxp.PlaybackToolbar = Ext.extend(Ext.Toolbar, {
     rateAdjuster:false,
     looped:false,
     autoPlay:false,
+    /* should the time slider be aggressive or not */
+    aggressive: null,
     //api config ->timeDisplayConfig:null,
     //api property
     optionsWindow:null,
@@ -109,13 +111,18 @@ gxp.PlaybackToolbar = Ext.extend(Ext.Toolbar, {
             },
             scope: this
         });
-
         if(!this.dimModel){
             this.dimModel = new OpenLayers.Dimension.Model({
                 dimension: 'time',
                 map: this.mapPanel.map
             });
         }
+        this.control.model.events.on({
+            'prebuffer': function(evt) {
+                this.slider.progressEl.setWidth(evt.progress*100 + '%');
+            },
+            scope: this
+        });
 
         this.availableTools = Ext.applyIf(this.availableTools || {}, this.getAvailableTools());
         
@@ -232,7 +239,8 @@ gxp.PlaybackToolbar = Ext.extend(Ext.Toolbar, {
                 map: this.mapPanel.map,
                 timeManager: this.control,
                 model: this.dimModel,
-                playbackMode: this.playbackMode
+                playbackMode: this.playbackMode,
+                aggressive: this.aggressive
             },
             'reset': {
                 iconCls: 'gxp-icon-reset',

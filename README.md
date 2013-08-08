@@ -1,6 +1,15 @@
-#salamati
+#Salamati
 
-ROGUE Basic Client
+Salamati is a web client based on OpenLayers that provides capabilities for editing features and interacting with GeoGit repositories
+
+##Features
+ * Add/Remove/Re-order WMS, WFS, and GeoGit layers
+ * Edit geometries for 2D point, line, and polygon features
+ * Edit attributes for point, line, and polygon features
+ * View the edit history of a feature in a GeoGit data store
+ * Basic merge capabilities for GeoGit data stores
+ * Temporal playback for temporal layers
+ * Intergration with GeoNode
 
 ##Build Instructions
 **Example**
@@ -24,7 +33,7 @@ Here are some ways to deploy the generated war file (there are probably others):
  * Use the *deploy* target in the suitesdk/build.xml ant script to deploy using [Cargo](http://cargo.codehaus.org/)
  * Set up a custom [Cargo](http://cargo.codehaus.org/) deployment
  
- ##Deploying through GeoServer
+##Deploying through GeoServer
  **Example**
  
  * Run GeoServer.
@@ -34,3 +43,20 @@ Here are some ways to deploy the generated war file (there are probably others):
  
  * This should deploy to port 9080 by default (the console will output the port number)
  * This will also allow you to update the files without having to remake the war file. Just save and refresh the webpage.
+
+##License
+
+Salamati is licensed under [GNU GPL 2.0] (http://www.gnu.org/licenses/gpl.html)
+
+Copyright (c) 2013, LMN Solutions LLC.
+All rights reserved.
+
+Salamati is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+Salamati is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+details.

@@ -102,6 +102,10 @@
         <copy todir="${app.build}/src/openlayers/theme">
             <fileset dir="${app.fullpath}/src/openlayers/theme"/>
         </copy>
+        <!-- copy Lightbox resources -->
+        <copy todir="${app.build}/src/lightbox">
+        	<fileset dir="${app.fullpath}/src/lightbox"/>
+        </copy>
         <!-- copy GeoExt resources -->
         <copy todir="${app.build}/src/geoext/resources">
             <fileset dir="${app.fullpath}/src/geoext/resources"/>

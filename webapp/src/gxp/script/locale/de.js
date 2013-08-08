@@ -406,6 +406,23 @@ GeoExt.Lang.add("de", {
 
     "gxp.ScaleOverlay.prototype": { 
         zoomLevelText: "Zoomstufe"
+    },
+
+    "gxp.Viewer.prototype": {
+        saveErrorText: "Beim Speichern ist ein Problem aufgetreten: "
+    },
+
+    "gxp.FeedSourceDialog.prototype": {
+        feedTypeText: "Source",
+        addPicasaText: "Picasa Fotos",
+        addYouTubeText: "YouTube Videos",
+        addRSSText: "Andere GeoRSS Feed",
+        addFeedText: "zur Karte hinzufügen",
+        addTitleText: "Titel",
+        keywordText: "Keyword",
+        doneText: "Fertig",
+        titleText: "Add-Feeds",
+        maxResultsText: "Max Items"
     }
 
 });
